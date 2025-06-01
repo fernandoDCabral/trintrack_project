@@ -80,36 +80,6 @@
 
 
 ;=====================================================================================================
-; Comandos para testar:
-; no browse / navegador
-#_ (
-            http://localhost:3000/usuario/dados
-            http://localhost:3000/usuario/existe
-
-           http://localhost:3000/alimentacao/dados
-           http://localhost:3000/alimentacao/existe
-
-
-           http://localhost:3000/exercicio/dados
-           http://localhost:3000/exercicio/existe
-                   )
-
-
-; Comandos para testar:
-; no Terminal
-
-#_ (
-          curl http://localhost:3000/usuario/dados
-          curl http://localhost:3000/usuario/existe
-
-          curl http://localhost:3000/alimentacao/dados
-          curl http://localhost:3000/alimentacao/existe
-
-
-          curl http://localhost:3000/exercicio/dados
-          curl http://localhost:3000/exercicio/existe
-     )
-;=====================================================================================================
 
 (def routes
   (route/expand-routes
