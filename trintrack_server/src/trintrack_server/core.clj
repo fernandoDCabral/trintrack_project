@@ -5,7 +5,8 @@
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
             [cheshire.core :as json]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clj-http.client :as client]))
 
 (def usuario (atom nil))
 (def alimentos (atom nil))
@@ -14,28 +15,55 @@
 (def atividade (atom nil))
 
 ;remover depois essa parte =============================================================================================
-(def lista-alimentos
-  (atom ["carne: a" "carne: b" "carne: c" "carne: d" "carne: e"
-         "frango: a" "frango: b" "frango: c" "frango: d" "frango: e"]))
+;(def lista-alimentos
+;  (atom ["carne: a" "carne: b" "carne: c" "carne: d" "carne: e"
+;         "frango: a" "frango: b" "frango: c" "frango: d" "frango: e"]))
+;
+;(def lista-treinos
+;  (atom ["cardio: a" "cardio: b" "cardio: c" "cardio: d" "cardio: e"
+;         "levantamento: a" "levantamento: b" "levantamento: c" "levantamento: d" "levantamento: e"]))
 
-(def lista-treinos
-  (atom ["cardio: a" "cardio: b" "cardio: c" "cardio: d" "cardio: e"
-         "levantamento: a" "levantamento: b" "levantamento: c" "levantamento: d" "levantamento: e"]))
+;(defn sugestoes-alimentos [request]
+;  (let [filtro (get-in request [:query-params :filtro] "")
+;        resultado (filter #(str/includes? (str/lower-case %) (str/lower-case filtro)) @lista-alimentos)]
+;    {:status 200
+;     :headers {"Content-Type" "application/json"}
+;     :body (json/generate-string resultado)}))
+;
+;(defn sugestoes-treinos [request]
+;  (let [filtro (get-in request [:query-params :filtro] "")
+;        resultado (filter #(str/includes? (str/lower-case %) (str/lower-case filtro)) @lista-treinos)]
+;    {:status 200
+;     :headers {"Content-Type" "application/json"}
+;     :body (json/generate-string resultado)}))
+
 ;remover depois essa parte =============================================================================================
+(def api-key-alimento "PDSEBKyA7mkKtiKSE6nYpuciLt4ChDkYWy1CWrJV")
+(def api-key-exercicio "50FiZTJVYBfyKW+IwX7Njw==MgBQnbHtREkAaDU8")
 
 (defn sugestoes-alimentos [request]
   (let [filtro (get-in request [:query-params :filtro] "")
-        resultado (filter #(str/includes? (str/lower-case %) (str/lower-case filtro)) @lista-alimentos)]
+        filtro-encoded (java.net.URLEncoder/encode (str filtro) "UTF-8")
+        url (str "https://api.nal.usda.gov/fdc/v1/foods/search?query="
+                 filtro-encoded
+                 "&api_key=" api-key-alimento)
+        resposta (client/get url {:as :json})
+        alimentos (mapv #(get % :description) (get-in resposta [:body :foods]))]
     {:status 200
      :headers {"Content-Type" "application/json"}
-     :body (json/generate-string resultado)}))
+     :body (json/generate-string alimentos)}))
 
 (defn sugestoes-treinos [request]
   (let [filtro (get-in request [:query-params :filtro] "")
-        resultado (filter #(str/includes? (str/lower-case %) (str/lower-case filtro)) @lista-treinos)]
+        url (str "https://api.api-ninjas.com/v1/caloriesburned?activity="
+                 (java.net.URLEncoder/encode (str filtro) "UTF-8"))
+        resposta (client/get url {:as :string
+                                  :headers {"X-Api-Key" api-key-exercicio}})
+        dados (json/parse-string (:body resposta) true)
+        nomes (mapv #(get % :name) dados)]
     {:status 200
      :headers {"Content-Type" "application/json"}
-     :body (json/generate-string resultado)}))
+     :body (json/generate-string nomes)}))
 
 ;=======================================================================================================================
 
