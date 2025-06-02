@@ -1,21 +1,50 @@
-; Rode o server primeiro no REPL depois o fronte (current file).
+; Rode o server primeiro no REPL depois o fronte (current file)
 
 (ns trintrack-server.core
   (:require [io.pedestal.http :as http]
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            [clojure.string :as str]))
 
 (def usuario (atom nil))
 (def alimentos (atom nil))
 (def treinos (atom nil))
+(def prato (atom nil))
+(def atividade (atom nil))
+
+;remover depois essa parte =============================================================================================
+(def lista-alimentos
+  (atom ["carne: a" "carne: b" "carne: c" "carne: d" "carne: e"
+         "frango: a" "frango: b" "frango: c" "frango: d" "frango: e"]))
+
+(def lista-treinos
+  (atom ["cardio: a" "cardio: b" "cardio: c" "cardio: d" "cardio: e"
+         "levantamento: a" "levantamento: b" "levantamento: c" "levantamento: d" "levantamento: e"]))
+;remover depois essa parte =============================================================================================
+
+(defn sugestoes-alimentos [request]
+  (let [filtro (get-in request [:query-params :filtro] "")
+        resultado (filter #(str/includes? (str/lower-case %) (str/lower-case filtro)) @lista-alimentos)]
+    {:status 200
+     :headers {"Content-Type" "application/json"}
+     :body (json/generate-string resultado)}))
+
+(defn sugestoes-treinos [request]
+  (let [filtro (get-in request [:query-params :filtro] "")
+        resultado (filter #(str/includes? (str/lower-case %) (str/lower-case filtro)) @lista-treinos)]
+    {:status 200
+     :headers {"Content-Type" "application/json"}
+     :body (json/generate-string resultado)}))
+
+;=======================================================================================================================
 
 (defn hello [request]
   {:status 200
    :headers {"Content-Type" "text/plain"}
    :body "Hello World from TrinTrack Backend!"})
 
-;=====================================================================================================
+;=======================================================================================================================
 
 (defn cadastrar-usuario [request]
   (let [dados (:json-params request)]
@@ -36,7 +65,7 @@
      :headers {"Content-Type" "application/json"}
      :body (json/generate-string {:erro "Nenhum usuário cadastrado."})}))
 
-;=====================================================================================================
+;=======================================================================================================================
 
 (defn cadastrar-alimentos [request]
   (let [dados (:json-params request)]
@@ -57,7 +86,7 @@
      :headers {"Content-Type" "application/json"}
      :body (json/generate-string {:erro "Nenhum alimento cadastrado."})}))
 
-;=====================================================================================================
+;=======================================================================================================================
 
 (defn cadastrar-treinios [request]
   (let [dados (:json-params request)]
@@ -79,11 +108,13 @@
      :body (json/generate-string {:erro "Nenhum treino cadastrado."})}))
 
 
-;=====================================================================================================
+;=======================================================================================================================
 
 (def routes
   (route/expand-routes
     #{["/hello" :get hello :route-name :hello]
+      ["/alimentos/sugestoes" :get sugestoes-alimentos :route-name :sugestoes-alimentos]
+      ["/treinos/sugestoes" :get sugestoes-treinos :route-name :sugestoes-treinos]
 
       ["/usuario" :post cadastrar-usuario :route-name :cadastrar-usuario]
       ["/usuario/existe" :get verificar-usuario :route-name :verificar-usuario]
