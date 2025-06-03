@@ -36,19 +36,6 @@
     (println "Usuário cadastrado com sucesso:" usuario)))
 
 ;=======================================================================================================================
-;(defn cadastro-alimento []
-;  (println "=== Registrar Alimentação ===")
-;  (if (verificar-usuario-cadastrado)
-;    (let [nome-comida (do (println "Digite o que comeu: ") (ler-nome))
-;          quantidade (do (println "Quantidade (gramas):") (Integer/parseInt (read-line)))
-;          data (do (println "Data da refeição (dd/mm/aaaa):") (formatar-data (read-line)))
-;          alimento {:nome nome-comida :quantidade quantidade :data data}]
-;      (client/post (str base-url "/alimentacao")
-;                     {:headers {"Content-Type" "application/json"}
-;                      :body (json/generate-string alimento)})
-;      (println "Alimento registrado com sucesso: " alimento))
-;    (println "Nenhum usuário cadastrado. Cadastre o usuário primeiro.")))
-
 
 ;usado para treino e alimentos
 (defn imprimir-opcoes ([opcoes] (imprimir-opcoes opcoes 1))
@@ -73,12 +60,16 @@
           (do
             (println (str "Alimentos relacionados a '" entrada "':"))
             (imprimir-opcoes opcoes)
-            (print "Escolha o número do alimento: ") (flush)
+            (print "Escolha o número do alimento: ")
+            (flush)
+
             (let [indice (dec (Integer/parseInt (read-line)))
-                  alimento-escolhido (nth opcoes indice)
+                  alimento-escolhido  (nth opcoes indice)
+                  nome (:prato alimento-escolhido)
+                  calorias (:calorias alimento-escolhido)
                   quantidade (do (println "Quantidade (gramas):") (Integer/parseInt (read-line)))
                   data (do (println "Data da refeição (dd/mm/aaaa):") (formatar-data (read-line)))
-                  alimento {:nome alimento-escolhido :quantidade quantidade :data data}]
+                  alimento {:prato nome :calorias calorias :quantidade quantidade :data data }]
               (client/post (str base-url "/alimentacao")
                            {:headers {"Content-Type" "application/json"}
                             :body (json/generate-string alimento)})
@@ -87,19 +78,6 @@
 
 
 ;=======================================================================================================================
-
-;(defn cadastro-treino []
-;  (println "=== Registrar Treino ===")
-;  (if (verificar-usuario-cadastrado)
-;    (let [nome-treino (do (println "Digite o que treinou: ") (ler-nome))
-;          tempo (do (println "Tempo (minutos):") (Integer/parseInt (read-line)))
-;          data (do (println "Data da refeição (dd/mm/aaaa):") (formatar-data (read-line)))
-;          treino {:nome nome-treino :tempo tempo :data data }]
-;      (client/post (str base-url "/exercicio")
-;                     {:headers {"Content-Type" "application/json"}
-;                      :body (json/generate-string treino)})
-;      (println "Treino registrado com sucesso: " treino))
-;    (println "Nenhum usuário cadastrado. Cadastre o usuário primeiro.")))
 
 (defn cadastro-treino []
   (println "=== Registrar Treino ===")
@@ -115,27 +93,34 @@
           (do
             (println (str "treinos relacionados a '" entrada "':"))
             (imprimir-opcoes opcoes)
-            (print "Escolha o número do treino: ") (flush)
+            (print "Escolha o número do treino: ")
+            (flush)
             (let [indice (dec (Integer/parseInt (read-line)))
                   treino-escolhido (nth opcoes indice)
+                  nome (:nome treino-escolhido)
+                  calorias-hora (:calorias-por-hora treino-escolhido)
                   tempo (do (println "Tempo (minutos):") (Integer/parseInt (read-line)))
                   data (do (println "Data da refeição (dd/mm/aaaa):") (formatar-data (read-line)))
-                  treino {:nome treino-escolhido :tempo tempo :data data}]
+                  treino {:nome nome
+                          :calorias-por-hora calorias-hora
+                          :tempo tempo
+                          :data data}]
+              ;; envia para o backend
               (client/post (str base-url "/exercicio")
                            {:headers {"Content-Type" "application/json"}
                             :body (json/generate-string treino)})
-              (println "Alimento registrado com sucesso:" treino))))))
+              (println "Treino registrado com sucesso:" treino))
+            ))))
     (println "Nenhum usuário cadastrado. Cadastre o usuário primeiro.")))
 
 
 ;=======================================================================================================================
 (defn menu_opcoes []
-  (println "Bem-vindo ao TRINTRACK - Seu App de Controle Corporal")
   (println "1 - Cadastro do usuário")
   (println "2 - Registrar alimentação")
   (println "3 - Registrar treino")
-  ;(println "4 - Consultar saldo de perca do dia")
-  ;(println "5 - Consultar saldo de perca do dia")
+  ;(println "4 - Consultar saldo ")
+  ;(println "5 - Consultar extrato")
   (println "6 - Encerrar")
   (print "Escolha uma opção: ")
   (flush)
@@ -153,6 +138,7 @@
   )
 
 (defn trin-track []
+  (println "Bem-vindo ao TRINTRACK - Seu App de Controle Corporal")
   (menu_opcoes)
   (let [opcao (read-line)]
     (if (= opcao "6")
