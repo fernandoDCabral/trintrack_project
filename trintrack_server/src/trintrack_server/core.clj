@@ -7,15 +7,18 @@
             [cheshire.core :as json]
             [clojure.string :as str]
             [clj-http.client :as client]
+            [clj-time.format :as f]
+            [clj-time.coerce :as c]
             ))
 
 (def usuario (atom nil))
 (def alimentos (atom nil))
 (def treinos (atom nil))
-(def extrato (atom []))
 
 (def api-key-alimento "PDSEBKyA7mkKtiKSE6nYpuciLt4ChDkYWy1CWrJV")
 (def api-key-exercicio "50FiZTJVYBfyKW+IwX7Njw==MgBQnbHtREkAaDU8")
+
+(def iso-formatter (f/formatter "yyyy/MM/dd"))
 
 (defn traduzir-texto [texto de para]
   (let [url (str "https://api.mymemory.translated.net/get?q="
@@ -90,31 +93,29 @@
 
 ;extrato================================================================================================================
 
-;(defn parse-ddMMyyyy [s]
-;  (let [[d m y] (map #(Integer/parseInt %) (clojure.string/split s #"/"))]
-;    {:ano y :mes m :dia d}))
-;
-;(defn comparar-datas [a b]
-;  (compare (parse-ddMMyyyy (:data a)) (parse-ddMMyyyy (:data b))))
-;
-;(defn inserir-no-extrato [registro]
-;  (let [atualizado (->> (conj @extrato registro)
-;                        (sort comparar-datas)
-;                        vec)]
-;    (reset! extrato atualizado)))
-;
-;(defn mostrar-extrato [request]
-;  (let [alimentoss @alimentos
-;        treinos @treinos
-;        todos (sort comparar-datas (concat alimentoss treinos))]
-;    {:status  200
-;     :headers {"Content-Type" "application/json"}
-;     :body (json/generate-string todos)}))
+(defn parse-data [data-str]
+  (c/to-long (f/parse iso-formatter data-str)))
 
-;(defn mostrar-extrato [request]
-;  {:status 200
-;   :headers {"Content-Type" "application/json"}
-;   :body (json/generate-string @extrato)})
+(defn filtrar-por-periodo [lista inicio fim]
+  (filter (fn [{:keys [data]}]
+            (let [data-ms (parse-data data)]
+              (and (>= data-ms inicio) (<= data-ms fim))))
+          lista))
+
+(defn mostrar-extrato [request]
+  (let [inicio-str (get-in request [:query-params :inicio])
+        fim-str    (get-in request [:query-params :fim])
+        inicio-ms  (parse-data inicio-str)
+        fim-ms     (parse-data fim-str)
+        alimentos-filtrados  (filtrar-por-periodo @alimentos inicio-ms fim-ms)
+        treinos-filtrados    (filtrar-por-periodo @treinos inicio-ms fim-ms)]
+    {:status 200
+     :headers {"Content-Type" "application/json"}
+     :body (json/generate-string
+             {:periodo {:inicio inicio-str :fim fim-str}
+              :alimentos alimentos-filtrados
+              :exercicios treinos-filtrados})}))
+
 
 ;extrato================================================================================================================
 
@@ -177,13 +178,13 @@
   (route/expand-routes
     #{["/alimentos/sugestoes" :get sugestoes-alimentos :route-name :sugestoes-alimentos]
       ["/treinos/sugestoes" :get sugestoes-treinos :route-name :sugestoes-treinos]
-      ;["/extrato" :get mostrar-extrato :route-name :mostrar-extrato]
+      ["/extrato" :get mostrar-extrato :route-name :mostrar-extrato]
       ["/usuario" :post cadastrar-usuario :route-name :cadastrar-usuario]
+      ["/usuario/existe" :get verificar-usuario :route-name :verificar-usuario]
       ["/alimentacao" :post cadastrar-alimentos :route-name :cadastrar-alimentos]
       ["/exercicio" :post cadastrar-treinios :route-name :cadastrar-treinios]
 
 
-      ["/usuario/existe" :get verificar-usuario :route-name :verificar-usuario]
       ["/usuario/dados" :get mostrar-usuario :route-name :mostrar-usuario]
 
       ["/alimentacao/existe" :get verificar-alimentos :route-name :verificar-alimentos]
