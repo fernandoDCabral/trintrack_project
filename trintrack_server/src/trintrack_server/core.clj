@@ -116,19 +116,48 @@
               :alimentos alimentos-filtrados
               :exercicios treinos-filtrados})}))
 
-
 ;extrato================================================================================================================
+;saldo =================================================================================================================
+
+(defn calcular-saldo-por-dia [alimentos treinos]
+  (let [consumidas (reduce (fn [acc {:keys [data calorias]}]
+                             (let [dia (subs data 0 10)
+                                   total (+ (get acc dia 0) calorias)]
+                               (assoc acc dia total)))
+                           {} alimentos)
+        gastas (reduce (fn [acc {:keys [data calorias-por-hora]}]
+                         (let [dia (subs data 0 10)
+                               total (+ (get acc dia 0) calorias-por-hora)]
+                           (assoc acc dia total)))
+                       {} treinos)
+        todos-os-dias (set (concat (keys consumidas) (keys gastas)))]
+    (reduce (fn [acc dia]
+              (let [c (get consumidas dia 0)
+                    g (get gastas dia 0)]
+                (assoc acc dia (- c g))))
+            {} todos-os-dias)))
+
+
+(defn mostrar-saldo [request]
+  (let [inicio-str (get-in request [:query-params :inicio])
+        fim-str    (get-in request [:query-params :fim])
+        inicio-ms  (parse-data inicio-str)
+        fim-ms     (parse-data fim-str)
+        alimentos-filtrados  (filtrar-por-periodo @alimentos inicio-ms fim-ms)
+        treinos-filtrados    (filtrar-por-periodo @treinos inicio-ms fim-ms)
+        saldo (calcular-saldo-por-dia alimentos-filtrados treinos-filtrados)]
+    {:status 200
+     :headers {"Content-Type" "application/json"}
+     :body (json/generate-string {:periodo {:inicio inicio-str :fim fim-str}
+                                  :saldo saldo})}))
+
+;saldo =================================================================================================================
+
 
 (defn cadastrar-alimentos [request]
   (let [dados (:json-params request)]
     (swap! alimentos conj dados)
     {:status 200 :body {:mensagem "alimento cadastrado com sucesso!" :alimentos dados}}))
-
-;(defn cadastrar-alimentos [request]
-;  (let [dados (:json-params request)]
-;    (swap! alimentos conj dados)
-;    (inserir-no-extrato (assoc dados :tipo :entrada))  ;; positivo
-;    {:status 200 :body {:mensagem "alimento cadastrado com sucesso!" :alimentos dados}}))
 
 (defn verificar-alimentos [request]
   {:status 200
@@ -146,17 +175,10 @@
 
 ;=======================================================================================================================
 
-(defn cadastrar-treinios [request]
+(defn cadastrar-treinos [request]
   (let [dados (:json-params request)]
     (swap! treinos conj dados)
     {:status 200 :body {:mensagem "treino cadastrado com sucesso!" :treinos dados}}))
-
-;(defn cadastrar-treinios [request]
-;  (let [dados (:json-params request)] ;; negativo
-;    (swap! treinos conj dados)
-;    (inserir-no-extrato (assoc dados :tipo :saida))
-;    {:status 200 :body {:mensagem "treino cadastrado com sucesso!" :treinos dados}}))
-
 
 (defn verificar-treinios [request]
   {:status 200
@@ -182,8 +204,8 @@
       ["/usuario" :post cadastrar-usuario :route-name :cadastrar-usuario]
       ["/usuario/existe" :get verificar-usuario :route-name :verificar-usuario]
       ["/alimentacao" :post cadastrar-alimentos :route-name :cadastrar-alimentos]
-      ["/exercicio" :post cadastrar-treinios :route-name :cadastrar-treinios]
-
+      ["/exercicio" :post cadastrar-treinos :route-name :cadastrar-treinios]
+      ["/saldo" :get mostrar-saldo :route-name :saldo]
 
       ["/usuario/dados" :get mostrar-usuario :route-name :mostrar-usuario]
 
@@ -192,7 +214,6 @@
 
       ["/exercicio/existe" :get verificar-treinios :route-name :verificar-treinios]
       ["/exercicio/dados" :get mostrar-treinios :route-name :mostrar-treinios]
-
 
       }))
 
