@@ -45,9 +45,7 @@
       (recur (rest opcoes) (inc idx)))))
 
 (defn calcular-calorias [calorias_g_p gramas_tempo variavel]
-(let [resultado (* (double calorias_g_p) (/ gramas_tempo variavel))]
-  (Double/parseDouble (format "%.2f" resultado))
-  ))
+  (/ (Math/round (* 100.0 (double calorias_g_p) (/ gramas_tempo variavel))) 100.0))
 
 ;usado para treino/ alimentos ⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_
 ;usado para extrato ⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_
