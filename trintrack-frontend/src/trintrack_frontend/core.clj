@@ -38,11 +38,22 @@
 ;Verificações ⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_
 ;usado para treino/ alimentos ⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_
 
+;(defn imprimir-opcoes [opcoes idx]
+;  (let [idx (or idx 1)]
+;    (when (seq opcoes)
+;      (println (str idx " - " (first opcoes)))
+;      (recur (rest opcoes) (inc idx)))))
+
 (defn imprimir-opcoes [opcoes idx]
-  (let [idx (or idx 1)]
-    (when (seq opcoes)
-      (println (str idx " - " (first opcoes)))
-      (recur (rest opcoes) (inc idx)))))
+  (when (seq opcoes)
+    (let [item (first opcoes)]
+      (cond
+        (:prato item)
+        (println (str idx " - " (:prato item) " (" (:calorias item) " kcal)"))
+
+        (:nome item)
+        (println (str idx " - " (:nome item) " (" (:calorias-por-hora item) " kcal/h)"))))
+    (recur (rest opcoes) (inc idx))))
 
 (defn calcular-calorias [calorias_g_p gramas_tempo variavel]
   (/ (Math/round (* 100.0 (double calorias_g_p) (/ gramas_tempo variavel))) 100.0))
@@ -92,17 +103,39 @@
 
 ;usado para extrato ⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_
 ;usado para saldo ⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_
-(defn imprimir-saldo-por-data [saldos idx]
-  (let [saldos-lista (vec (sort-by key saldos))]
-    (when (< idx (count saldos-lista))
-      (let [[data saldo] (nth saldos-lista idx)]
-        (println (str "Data: " data ", Saldo calórico: " saldo " kcal")))
-      (recur saldos-lista (inc idx)))))
+
+;(defn imprimir-saldo-por-data [saldos idx]
+;  (let [saldos-lista (vec (sort-by key saldos))]
+;    (when (< idx (count saldos-lista))
+;      (let [[data saldo] (nth saldos-lista idx)]
+;        (println (str "Data: " data ", Saldo calórico: " saldo " kcal")))
+;      (recur saldos-lista (inc idx)))))
+;
+;(defn consultar-saldo []
+;  (if (verificar-usuario-cadastrado)
+;    (do
+;      (println "=== Consultar Saldo por Período ===")
+;      (print "Digite a data de início (aaaa/mm/dd): ")
+;      (flush)
+;      (let [inicio (formatar-data)
+;            _ (print "Digite a data de fim (aaaa/mm/dd): ")
+;            _ (flush)
+;            fim (formatar-data)
+;            resposta (client/get (str base-url "/saldo")
+;                                 {:query-params {"inicio" inicio "fim" fim}
+;                                  :as :json})
+;            corpo (:body resposta)
+;            saldo (:saldo corpo)]
+;        (println "\n--- Saldo Calórico do periodo ---")
+;        (if (seq saldo)
+;          (imprimir-saldo-por-data (vec saldo) 0)
+;          (println "Nenhum dado de saldo encontrado nesse período."))))
+;    (println "Nenhum usuário cadastrado. Cadastre o usuário primeiro.")))
 
 (defn consultar-saldo []
   (if (verificar-usuario-cadastrado)
     (do
-      (println "=== Consultar Saldo por Período ===")
+      (println "=== Consultar Saldo Total por Período ===")
       (print "Digite a data de início (aaaa/mm/dd): ")
       (flush)
       (let [inicio (formatar-data)
@@ -113,12 +146,11 @@
                                  {:query-params {"inicio" inicio "fim" fim}
                                   :as :json})
             corpo (:body resposta)
-            saldo (:saldo corpo)]
-        (println "\n--- Saldo Calórico do periodo ---")
-        (if (seq saldo)
-          (imprimir-saldo-por-data (vec saldo) 0)
-          (println "Nenhum dado de saldo encontrado nesse período."))))
+            saldos (:saldo corpo)
+            total (reduce + (vals saldos))]
+        (println (str "\nSaldo calórico total de " inicio " até " fim ": " total " kcal"))))
     (println "Nenhum usuário cadastrado. Cadastre o usuário primeiro.")))
+
 
 ;usado para saldo ⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_⍐_
 ;usado para cadastros ⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_⍗_
@@ -137,7 +169,7 @@
         (client/post (str base-url "/usuario")
                      {:headers {"Content-Type" "application/json"}
                       :body (json/generate-string usuario)})
-        (println "Usuário cadastrado com sucesso:")))))
+        (println "Usuário cadastrado com sucesso.")))))
 
 (defn cadastro-alimento []
   (println "=== Registrar Alimentação ===")
@@ -153,7 +185,7 @@
           (do
             (println (str "Alimentos relacionados a '" entrada "':"))
             (imprimir-opcoes opcoes 1)
-            (print "Escolha o número do alimento: ")
+            (print "Escolha o número do alimento:")
             (flush)
 
             (let [indice (dec (Integer/parseInt (read-line)))
@@ -167,7 +199,7 @@
               (client/post (str base-url "/alimentacao")
                            {:headers {"Content-Type" "application/json"}
                             :body (json/generate-string alimento)})
-              (println "Alimento registrado com sucesso:"))))))
+              (println "Alimento registrado com sucesso."))))))
     (println "Nenhum usuário cadastrado. Cadastre o usuário primeiro.")))
 
 (defn cadastro-treino []
@@ -200,7 +232,7 @@
               (client/post (str base-url "/exercicio")
                            {:headers {"Content-Type" "application/json"}
                             :body (json/generate-string treino)})
-              (println "Treino registrado com sucesso:"))
+              (println "Treino registrado com sucesso."))
             ))))
     (println "Nenhum usuário cadastrado. Cadastre o usuário primeiro.")))
 
