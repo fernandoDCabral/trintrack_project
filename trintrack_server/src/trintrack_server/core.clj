@@ -5,8 +5,8 @@
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
             [cheshire.core :as json]
-            [clojure.string :as str]
             [clj-http.client :as client]
+            [clojure.string :as str]
             [clj-time.format :as f]
             [clj-time.coerce :as c]
             ))
@@ -52,11 +52,33 @@
      :headers {"Content-Type" "application/json"}
      :body (json/generate-string alimentos)}))
 
+;(defn sugestoes-treinos [request]
+;  (let [filtro (get-in request [:query-params :filtro] "")
+;        filtro-en (traduzir-texto filtro "pt" "en")
+;        url (str "https://api.api-ninjas.com/v1/caloriesburned?activity="
+;                 (java.net.URLEncoder/encode filtro-en "UTF-8"))
+;        resposta (client/get url {:as :string
+;                                  :headers {"X-Api-Key" api-key-exercicio}})
+;        dados (json/parse-string (:body resposta) true)
+;        treinos (mapv (fn [item]
+;                        (let [nome (or (:name item) "Não informado")
+;                              nome-pt (traduzir-texto nome "en" "pt")]
+;                          {:nome nome-pt
+;                           :calorias-por-hora (:calories_per_hour item)}))
+;                      dados)]
+;    {:status 200
+;     :headers {"Content-Type" "application/json"}
+;     :body (json/generate-string treinos)}))
+
 (defn sugestoes-treinos [request]
   (let [filtro (get-in request [:query-params :filtro] "")
         filtro-en (traduzir-texto filtro "pt" "en")
-        url (str "https://api.api-ninjas.com/v1/caloriesburned?activity="
-                 (java.net.URLEncoder/encode filtro-en "UTF-8"))
+        peso (:peso @usuario)
+        base-url (str "https://api.api-ninjas.com/v1/caloriesburned?activity="
+                      (java.net.URLEncoder/encode filtro-en "UTF-8"))
+        url (if peso
+              (str base-url "&weight=" (java.net.URLEncoder/encode (str peso) "UTF-8"))
+              base-url)
         resposta (client/get url {:as :string
                                   :headers {"X-Api-Key" api-key-exercicio}})
         dados (json/parse-string (:body resposta) true)
@@ -69,6 +91,7 @@
     {:status 200
      :headers {"Content-Type" "application/json"}
      :body (json/generate-string treinos)}))
+
 
 ;=======================================================================================================================
 
@@ -119,14 +142,32 @@
 ;extrato================================================================================================================
 ;saldo =================================================================================================================
 
+;(defn calcular-saldo-por-dia [alimentos treinos]
+;  (let [consumidas (reduce (fn [acc {:keys [data calorias]}]
+;                             (let [dia (subs data 0 10)
+;                                   total (+ (get acc dia 0) calorias)]
+;                               (assoc acc dia total)))
+;                           {} alimentos)
+;        gastas (reduce (fn [acc {:keys [data calorias-por-hora]}]
+;                         (let [dia (subs data 0 10)
+;                               total (+ (get acc dia 0) calorias-por-hora)]
+;                           (assoc acc dia total)))
+;                       {} treinos)
+;        todos-os-dias (set (concat (keys consumidas) (keys gastas)))]
+;    (reduce (fn [acc dia]
+;              (let [c (get consumidas dia 0)
+;                    g (get gastas dia 0)]
+;                (assoc acc dia (- c g))))
+;            {} todos-os-dias)))
+
 (defn calcular-saldo-por-dia [alimentos treinos]
   (let [consumidas (reduce (fn [acc {:keys [data calorias]}]
-                             (let [dia (subs data 0 10)
+                             (let [dia (subs data 0 10) ;; força string
                                    total (+ (get acc dia 0) calorias)]
                                (assoc acc dia total)))
                            {} alimentos)
         gastas (reduce (fn [acc {:keys [data calorias-por-hora]}]
-                         (let [dia (subs data 0 10)
+                         (let [dia (subs data 0 10) ;; força string
                                total (+ (get acc dia 0) calorias-por-hora)]
                            (assoc acc dia total)))
                        {} treinos)
@@ -145,11 +186,12 @@
         fim-ms     (parse-data fim-str)
         alimentos-filtrados  (filtrar-por-periodo @alimentos inicio-ms fim-ms)
         treinos-filtrados    (filtrar-por-periodo @treinos inicio-ms fim-ms)
-        saldo (calcular-saldo-por-dia alimentos-filtrados treinos-filtrados)]
+        saldo (calcular-saldo-por-dia alimentos-filtrados treinos-filtrados)
+        saldo-str (into {} (map (fn [[k v]] [(str k) v]) saldo))] ; <-- transformação aqui
     {:status 200
      :headers {"Content-Type" "application/json"}
      :body (json/generate-string {:periodo {:inicio inicio-str :fim fim-str}
-                                  :saldo saldo})}))
+                                  :saldo saldo-str})}))
 
 ;saldo =================================================================================================================
 
@@ -208,10 +250,8 @@
       ["/saldo" :get mostrar-saldo :route-name :saldo]
 
       ["/usuario/dados" :get mostrar-usuario :route-name :mostrar-usuario]
-
       ["/alimentacao/existe" :get verificar-alimentos :route-name :verificar-alimentos]
       ["/alimentacao/dados" :get mostrar-alimentos :route-name :mostrar-alimentos]
-
       ["/exercicio/existe" :get verificar-treinios :route-name :verificar-treinios]
       ["/exercicio/dados" :get mostrar-treinios :route-name :mostrar-treinios]
 
